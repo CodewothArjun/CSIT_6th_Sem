@@ -1,61 +1,130 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#define MAX_LEN 100
+// List of keywords
+char *keywords[] = {
+    "int", "float", "if", "else", "while", "for", "return", "char", "double", "void"
+};
+int n_keywords = 10;
 
-char keywords[8][10] = {"int","float","if","else","while","for","return","char"};
-
+// Function to check if a string is keyword
 int isKeyword(char *str) {
-    for(int i=0;i<8;i++) {
-        if(strcmp(str, keywords[i])==0)
-            return 1;
+    for (int i = 0; i < n_keywords; i++) {
+        if (strcmp(str, keywords[i]) == 0) return 1;
+    }
+    return 0;
+}
+// Function to recognize identifiers and keywords
+void identifier_or_keyword(char *str) {
+    if (isKeyword(str))
+        printf("Keyword\t\t%s\n", str);
+    else
+        printf("Identifier\t%s\n", str);
+}
+
+// Function to recognize operators
+int isOperator(char c) {
+    char operators[] = "+-*/%=<>&|!^";
+    for (int i = 0; operators[i]; i++) {
+        if (c == operators[i]) return 1;
     }
     return 0;
 }
 
 int main() {
-    char src[200];
-    printf("Enter source code:\n");
-    fgets(src,200,stdin);
+	
+    FILE *fp;
+    char ch, buffer[MAX_LEN];
+    int i = 0;
 
-    int i=0;
-    while(src[i]!='\0') {
-        if(isalpha(src[i])) { // identifier or keyword
-            char buf[50]; int j=0;
-            while(isalnum(src[i])) {
-                buf[j++]=src[i++];
-            }
-            buf[j]='\0';
-            if(isKeyword(buf))
-                printf("<Keyword, %s>\n", buf);
-            else
-                printf("<Identifier, %s>\n", buf);
-        }
-        else if(isdigit(src[i])) { // number
-            char buf[50]; int j=0;
-            while(isdigit(src[i])) {
-                buf[j++]=src[i++];
-            }
-            buf[j]='\0';
-            printf("<Constant, %s>\n", buf);
-        }
-        else if(src[i]=='"') { // string literal
-            char buf[100]; int j=0;
-            buf[j++]='"'; i++;
-            while(src[i]!='"' && src[i]!='\0') {
-                buf[j++]=src[i++];
-            }
-            if(src[i]=='"') buf[j++]='"';
-            buf[j]='\0'; i++;
-            printf("<String, %s>\n", buf);
-        }
-        else if(src[i]=='/' && src[i+1]=='/') { // single-line comment
-            while(src[i]!='\n' && src[i]!='\0') i++;
-        }
-        else if(strchr("+-*/=;(){}",src[i])) { // operators/symbols
-            printf("<Operator, %c>\n", src[i]);
-            i++;
-        }
-        else i++; // skip spaces, tabs, etc.
+    fp = fopen("lexicalAnalyzer.txt", "r");
+    if (!fp) {
+        printf("Error opening file!\n");
+        return 1;
     }
+
+    while ((ch = fgetc(fp)) != EOF) {
+        // Identifier or Keyword
+        if (isalpha(ch) || ch == '_') {
+            buffer[i++] = ch;
+            while (isalnum(ch = fgetc(fp)) || ch == '_') {
+                buffer[i++] = ch;
+            }
+            buffer[i] = '\0';
+            i = 0;
+            identifier_or_keyword(buffer);
+            ungetc(ch, fp);
+        }
+        // Number (constant)
+        else if (isdigit(ch)) {
+            buffer[i++] = ch;
+            while (isdigit(ch = fgetc(fp))) {
+                buffer[i++] = ch;
+            }
+            buffer[i] = '\0';
+            i = 0;
+            printf("Constant\t%s\n", buffer);
+            ungetc(ch, fp);
+        }
+        // String literal
+        else if (ch == '"') {
+            buffer[i++] = ch;
+            while ((ch = fgetc(fp)) != '"' && ch != EOF) {
+                buffer[i++] = ch;
+            }
+            buffer[i++] = '"';
+            buffer[i] = '\0';
+            i = 0;
+            printf("String\t\t%s\n", buffer);
+        }
+        // Comment (single-line // or multi-line /* */)
+        else if (ch == '/') {
+            char next = fgetc(fp);
+            if (next == '/') {
+                // single-line
+                buffer[i++] = '/';
+                buffer[i++] = '/';
+                while ((ch = fgetc(fp)) != '\n' && ch != EOF) {
+                    buffer[i++] = ch;
+                }
+                buffer[i] = '\0';
+                i = 0;
+                printf("Comment\t\t%s\n", buffer);
+            } else if (next == '*') {
+                // multi-line
+                buffer[i++] = '/';
+                buffer[i++] = '*';
+                while ((ch = fgetc(fp)) != EOF) {
+                    buffer[i++] = ch;
+                    if (ch == '*' && (ch = fgetc(fp)) == '/') {
+                        buffer[i++] = '/';
+                        break;
+                    } else {
+                        ungetc(ch, fp);
+                    }
+                }
+                buffer[i] = '\0';
+                i = 0;
+                printf("Comment\t\t%s\n", buffer);
+            } else {
+                printf("Operator\t/\n");
+                ungetc(next, fp);
+            }
+        }
+        // Operators
+        else if (isOperator(ch)) {
+            printf("Operator\t%c\n", ch);
+        }
+        // Ignore whitespace
+        else if (isspace(ch)) {
+            continue;
+        }
+        // Other symbols (punctuation)
+        else {
+            printf("Symbol\t\t%c\n", ch);
+        }
+    }
+    fclose(fp);
     return 0;
 }

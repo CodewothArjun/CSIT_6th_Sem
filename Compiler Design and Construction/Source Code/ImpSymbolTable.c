@@ -1,24 +1,24 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#define MAX 100
+// Structure for a symbol table entry
+typedef struct {
+    char name[50];   // Identifier name
+    char type[20];   // Data type (int, float, etc.)
+    char scope[20];  // Scope (global, local)
+} Symbol;
 
-#define SIZE 50   // max number of symbols
-
-// Structure of a symbol table entry
-struct Symbol {
-    char name[30];
-    char type[10];
-    char scope[10];
-};
-
-struct Symbol table[SIZE];
+// Symbol table and counter
+Symbol table[MAX];
 int count = 0;
 
-// Insert into symbol table
-void insert(char name[], char type[], char scope[]) {
-    // check duplicate
-    for(int i=0; i<count; i++) {
-        if(strcmp(table[i].name, name)==0 && strcmp(table[i].scope, scope)==0) {
-            printf("Error: Duplicate entry for %s in scope %s\n", name, scope);
+// Function to insert a new identifier
+void insert(char *name, char *type, char *scope) {
+    // Check if already exists
+    for (int i = 0; i < count; i++) {
+        if (strcmp(table[i].name, name) == 0 && strcmp(table[i].scope, scope) == 0) {
+            printf("Error: Identifier '%s' already exists in scope '%s'\n", name, scope);
             return;
         }
     }
@@ -29,39 +29,63 @@ void insert(char name[], char type[], char scope[]) {
     printf("Inserted: %s, %s, %s\n", name, type, scope);
 }
 
-// Lookup in symbol table
-int lookup(char name[], char scope[]) {
-    for(int i=0; i<count; i++) {
-        if(strcmp(table[i].name, name)==0 && strcmp(table[i].scope, scope)==0)
-            return i;
+// Function to lookup an identifier
+void lookup(char *name, char *scope) {
+    for (int i = 0; i < count; i++) {
+        if (strcmp(table[i].name, name) == 0 && strcmp(table[i].scope, scope) == 0) {
+            printf("Found: %s, %s, %s\n", table[i].name, table[i].type, table[i].scope);
+            return;
+        }
     }
-    return -1;
+    printf("Identifier '%s' not found in scope '%s'\n", name, scope);
 }
 
-// Display symbol table
+// Function to display the symbol table
 void display() {
-    printf("\n--- Symbol Table ---\n");
-    printf("%-15s %-10s %-10s\n", "Identifier", "Type", "Scope");
-    printf("-----------------------------------\n");
-    for(int i=0; i<count; i++) {
-        printf("%-15s %-10s %-10s\n", table[i].name, table[i].type, table[i].scope);
+    printf("\nSymbol Table:\n");
+    printf("%-20s %-10s %-10s\n", "Identifier", "Type", "Scope");
+    printf("-------------------------------------------\n");
+    for (int i = 0; i < count; i++) {
+        printf("%-20s %-10s %-10s\n", table[i].name, table[i].type, table[i].scope);
     }
 }
 
 int main() {
-    insert("x","int","global");
-    insert("y","float","global");
-    insert("x","int","local");
-    insert("z","char","local");
+    int choice;
+    char name[50], type[20], scope[20];
 
-    display();
+    while (1) {
+        printf("\nSymbol Table Operations:\n");
+        printf("1. Insert\n2. Lookup\n3. Display\n4. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
 
-    char id[10]="x", sc[10]="local";
-    int pos = lookup(id, sc);
-    if(pos!=-1)
-        printf("\nLookup: %s found at position %d with type %s\n", id, pos, table[pos].type);
-    else
-        printf("\nLookup: %s not found in scope %s\n", id, sc);
+        switch (choice) {
+            case 1:
+                printf("Enter identifier name: ");
+                scanf("%s", name);
+                printf("Enter type: ");
+                scanf("%s", type);
+                printf("Enter scope: ");
+                scanf("%s", scope);
+                insert(name, type, scope);
+                break;
+            case 2:
+                printf("Enter identifier name to lookup: ");
+                scanf("%s", name);
+                printf("Enter scope: ");
+                scanf("%s", scope);
+                lookup(name, scope);
+                break;
+            case 3:
+                display();
+                break;
+            case 4:
+                exit(0);
+            default:
+                printf("Invalid choice!\n");
+        }
+    }
 
     return 0;
 }

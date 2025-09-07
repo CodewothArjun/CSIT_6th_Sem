@@ -1,68 +1,97 @@
 #include <stdio.h>
 #include <string.h>
-
-#define MAX 10
-
-// Structure for an item
-struct Item {
-    char lhs;
-    char rhs[MAX];
-    int dotPos;  // position of the dot
-};
-
-// Function to print an item
-void printItem(struct Item item) {
-    int i;
-    printf("%c -> ", item.lhs);
-    for (i = 0; i < strlen(item.rhs); i++) {
-        if (i == item.dotPos) {
-            printf(".");
-        }
-        printf("%c", item.rhs[i]);
-    }
-    if (item.dotPos == strlen(item.rhs)) {
-        printf(".");
-    }
-    printf("\n");
-}
-
-// Closure function (basic for LR(0))
-void closure(struct Item items[], int n) {
-    printf("\nClosure Set:\n");
+#define MAX_ITEMS 20
+#define MAX_RHS 20
+typedef struct {
+    char lhs; char rhs[MAX_RHS]; int dot; // Dot position in RHS
+} Item;
+typedef struct {
+    char lhs; char rhs[MAX_RHS];
+} Production;
+Production grammar[MAX_ITEMS];
+int nprod;
+// Check if a symbol is non-terminal
+int isNonTerminal(char c, char nonterminals[], int nnonterm) {
+    for (int i = 0; i < nnonterm; i++)
+        if (nonterminals[i] == c) return 1;
+    return 0;
+} // Print set of items
+void printItems(Item items[], int n) {
     for (int i = 0; i < n; i++) {
-        printItem(items[i]);
-
-        // If dot is before a non-terminal, add its productions
-        if (items[i].dotPos < strlen(items[i].rhs)) {
-            char nextSymbol = items[i].rhs[items[i].dotPos];
-
-            if (nextSymbol == 'A') {
-                struct Item newItem = {'A', "a", 0};
-                printItem(newItem);
-            }
-            else if (nextSymbol == 'B') {
-                struct Item newItem = {'B', "b", 0};
-                printItem(newItem);
-            }
+        printf("%c -> ", items[i].lhs);
+        for (int j = 0; j <= strlen(items[i].rhs); j++) {
+            if (j == items[i].dot) printf(".");
+            if (items[i].rhs[j] != '\0') printf("%c", items[i].rhs[j]);
         }
-    }
+        printf("\n");
+    }} // Generate closure
+int closure(Item items[], int n, char nonterminals[], int nnonterm) {
+    int added = 1;
+    while (added) {
+        added = 0;
+        for (int i = 0; i < n; i++) {
+            if (items[i].dot < strlen(items[i].rhs)) {
+                char symbol = items[i].rhs[items[i].dot];
+                if (isNonTerminal(symbol, nonterminals, nnonterm)) {
+                    // Add all productions of this non-terminal
+                    for (int k = 0; k < nprod; k++) {
+                        if (grammar[k].lhs == symbol) {
+                            // Check if already in closure
+                            int exists = 0;
+                            for (int j = 0; j < n; j++) {
+                                if (items[j].lhs == grammar[k].lhs &&
+                                    strcmp(items[j].rhs, grammar[k].rhs) == 0 &&
+                                    items[j].dot == 0) {
+                                    exists = 1; break;
+                                }}
+                            if (!exists) {
+                                items[n].lhs = grammar[k].lhs;
+                                strcpy(items[n].rhs, grammar[k].rhs);
+                                items[n].dot = 0;
+                                n++;
+                                added = 1;
+                            }}}}}}}
+    return n;
 }
-
 int main() {
-    // Initial Item: S -> .AB
-    struct Item items[MAX];
-    int n = 1;
-
-    items[0].lhs = 'S';
-    strcpy(items[0].rhs, "AB");
-    items[0].dotPos = 0;
-
-    printf("Grammar:\n");
-    printf("S -> AB\n");
-    printf("A -> a\n");
-    printf("B -> b\n");
-
-    closure(items, n);
-
+    char nonterminals[MAX_ITEMS];
+    int nnonterm = 0;
+    printf("Enter number of productions: ");
+    scanf("%d", &nprod);
+    printf("Enter productions (without spaces):\n");
+    for (int i = 0; i < nprod; i++) {
+        char prod[20];
+        scanf("%s", prod);
+        grammar[i].lhs = prod[0];
+        strcpy(grammar[i].rhs, prod + 3);
+    } // Print original productions
+    printf("\nGiven Productions:\n");
+    for (int i = 0; i < nprod; i++) {
+        printf("%c -> %s\n", grammar[i].lhs, grammar[i].rhs);
+    } // Collect non-terminals
+    for (int i = 0; i < nprod; i++) {
+        int exists = 0;
+        for (int j = 0; j < nnonterm; j++)
+            if (nonterminals[j] == grammar[i].lhs) { exists = 1; break; }
+        if (!exists) nonterminals[nnonterm++] = grammar[i].lhs;
+    } // Get start symbol
+    char start;
+    printf("\nEnter start symbol: ");
+    scanf(" %c", &start); 
+    printf("\nAugmented Grammar:\n");    // Augment grammar
+    printf("S' -> %c\n", start); 
+    Item items[MAX_ITEMS];    // Initial item(s)
+    int n = 0; 
+    // Add augmented production as initial item
+    items[n].lhs = 'S';  // Augmented start symbol (S')
+    items[n].rhs[0] = start;
+    items[n].rhs[1] = '\0';
+    items[n].dot = 0;
+    n++;
+    printf("\nInitial Item(s):\n");    // Print initial item(s)
+    printItems(items, n); 
+    n = closure(items, n, nonterminals, nnonterm);     // Compute closure
+    printf("\nClosure Set:\n");
+    printItems(items, n); 
     return 0;
 }

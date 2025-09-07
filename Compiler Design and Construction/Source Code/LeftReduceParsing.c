@@ -1,83 +1,61 @@
 #include <stdio.h>
 #include <string.h>
-
-char input[50];        // input string
-char stack[50];        // parsing stack
-int top = -1;          // stack pointer
-int i = 0;             // input pointer
-
-// Push function
+#define MAX 100
+char stack[MAX];
+int top = -1;
 void push(char c) {
     stack[++top] = c;
     stack[top+1] = '\0';
 }
-
-// Pop function
 void pop() {
-    stack[top] = '\0';
-    top--;
+    if(top != -1) stack[top--] = '\0';
+}// Function to perform reduction based on grammar
+int reduce() { // a -> E
+    if(top >= 0 && stack[top] == 'a') {
+        stack[top] = 'E';
+        return 1;
+    }// E+E -> E
+    if(top >= 2 && stack[top] == 'E' && stack[top-1] == '+' && stack[top-2] == 'E') {
+        top -= 2;
+        stack[top] = 'E';
+        stack[top+1] = '\0';
+        return 1;
+    }// E*E -> E
+    if(top >= 2 && stack[top] == 'E' && stack[top-1] == '*' && stack[top-2] == 'E') {
+        top -= 2;
+        stack[top] = 'E';
+        stack[top+1] = '\0';
+        return 1;
+    }// (E) -> E
+    if(top >= 2 && stack[top] == ')' && stack[top-1] == 'E' && stack[top-2] == '(') {
+        top -= 2;
+        stack[top] = 'E';
+        stack[top+1] = '\0';
+        return 1;
+    }
+    return 0;
 }
-
-// Try reductions
-void check() {
-    // E -> a
-    if (stack[top] == 'a') {
-        pop();
-        push('E');
-        printf("\t\t\t\tReduce E->a\n");
-    }
-
-    // E -> (E)
-    if (top >= 2 && stack[top] == ')' && stack[top-2] == '(' && stack[top-1] == 'E') {
-        pop(); pop(); pop(); // remove ( E )
-        push('E');
-        printf("\t\t\t\tReduce E->(E)\n");
-    }
-
-    // E -> E+E
-    if (top >= 2 && stack[top] == 'E' && stack[top-1] == '+' && stack[top-2] == 'E') {
-        pop(); pop(); pop();
-        push('E');
-        printf("\t\t\t\tReduce E->E+E\n");
-    }
-
-    // E -> E*E
-    if (top >= 2 && stack[top] == 'E' && stack[top-1] == '*' && stack[top-2] == 'E') {
-        pop(); pop(); pop();
-        push('E');
-        printf("\t\t\t\tReduce E->E*E\n");
-    }
-}
-
 int main() {
+    char input[MAX];
+    int i = 0;
     printf("Enter input string: ");
     scanf("%s", input);
-
-    printf("\nSHIFT-REDUCE PARSING STEPS\n");
-    printf("-------------------------------------------\n");
-    printf("Stack\t\tInput\t\tAction\n");
-    printf("-------------------------------------------\n");
-
-    while (input[i] != '\0') {
-        // Shift
-        push(input[i]);
-        printf("%s\t\t%s\t\tShift\n", stack, input+i+1);
+    strcat(input, "$"); // end marker
+    printf("\n%-20s %-20s %-20s\n", "Stack", "Input", "Action");
+    printf("------------------------------------------------------------\n");
+    while(input[i] != '\0') {
+        push(input[i]);        // Shift
+        printf("%-20s %-20s %-20s\n", stack, input+i+1, input[i] == '$' ? "Accept" : "Shift");
+        // Reduce while possible
+        while(reduce()) {
+            printf("%-20s %-20s %-20s\n", stack, input+i+1, "Reduce");
+        }
+        // Accept if stack has E and input is $
+        if(input[i] == '$' && top == 0 && stack[top] == 'E') {
+            printf("%-20s %-20s %-20s\n", stack, input+i+1, "Accept");
+            break;
+        }
         i++;
-
-        // Try reductions
-        check();
     }
-
-    // Final check
-    while (top > 0) {
-        check();
-    }
-
-    if (strcmp(stack, "E") == 0) {
-        printf("\nString accepted!\n");
-    } else {
-        printf("\nString rejected!\n");
-    }
-
     return 0;
 }
