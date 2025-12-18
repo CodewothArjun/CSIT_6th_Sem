@@ -1,21 +1,26 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+
 #define MAX_LEN 100
+
 // List of keywords
 char *keywords[] = {
-    "int", "float", "if", "else", "while", "for", "return", "char", "double", "void"
+    "int", "float", "if", "else", "while",
+    "for", "return", "char", "double", "void"
 };
 int n_keywords = 10;
 
-// Function to check if a string is keyword
+// Check keyword
 int isKeyword(char *str) {
     for (int i = 0; i < n_keywords; i++) {
-        if (strcmp(str, keywords[i]) == 0) return 1;
+        if (strcmp(str, keywords[i]) == 0)
+            return 1;
     }
     return 0;
 }
-// Function to recognize identifiers and keywords
+
+// Identifier or Keyword
 void identifier_or_keyword(char *str) {
     if (isKeyword(str))
         printf("Keyword\t\t%s\n", str);
@@ -23,17 +28,13 @@ void identifier_or_keyword(char *str) {
         printf("Identifier\t%s\n", str);
 }
 
-// Function to recognize operators
-int isOperator(char c) {
-    char operators[] = "+-*/%=<>&|!^";
-    for (int i = 0; operators[i]; i++) {
-        if (c == operators[i]) return 1;
-    }
-    return 0;
+// Operator check
+int isOperatorChar(char c) {
+    char ops[] = "+-*/%=<>&|!^";
+    return strchr(ops, c) != NULL;
 }
 
 int main() {
-	
     FILE *fp;
     char ch, buffer[MAX_LEN];
     int i = 0;
@@ -45,10 +46,11 @@ int main() {
     }
 
     while ((ch = fgetc(fp)) != EOF) {
-        // Identifier or Keyword
+
+        /* Identifier or Keyword */
         if (isalpha(ch) || ch == '_') {
             buffer[i++] = ch;
-            while (isalnum(ch = fgetc(fp)) || ch == '_') {
+            while ((ch = fgetc(fp)) != EOF && (isalnum(ch) || ch == '_')) {
                 buffer[i++] = ch;
             }
             buffer[i] = '\0';
@@ -56,10 +58,14 @@ int main() {
             identifier_or_keyword(buffer);
             ungetc(ch, fp);
         }
-        // Number (constant)
+
+        /* Constant (Integer or Float) */
         else if (isdigit(ch)) {
+            int isFloat = 0;
             buffer[i++] = ch;
-            while (isdigit(ch = fgetc(fp))) {
+            while ((ch = fgetc(fp)) != EOF &&
+                  (isdigit(ch) || ch == '.')) {
+                if (ch == '.') isFloat = 1;
                 buffer[i++] = ch;
             }
             buffer[i] = '\0';
@@ -67,10 +73,11 @@ int main() {
             printf("Constant\t%s\n", buffer);
             ungetc(ch, fp);
         }
-        // String literal
+
+        /* String Literal */
         else if (ch == '"') {
             buffer[i++] = ch;
-            while ((ch = fgetc(fp)) != '"' && ch != EOF) {
+            while ((ch = fgetc(fp)) != EOF && ch != '"') {
                 buffer[i++] = ch;
             }
             buffer[i++] = '"';
@@ -78,53 +85,74 @@ int main() {
             i = 0;
             printf("String\t\t%s\n", buffer);
         }
-        // Comment (single-line // or multi-line /* */)
+
+        /* Comments */
         else if (ch == '/') {
             char next = fgetc(fp);
+
+            // Single-line comment
             if (next == '/') {
-                // single-line
                 buffer[i++] = '/';
                 buffer[i++] = '/';
-                while ((ch = fgetc(fp)) != '\n' && ch != EOF) {
+                while ((ch = fgetc(fp)) != EOF && ch != '\n') {
                     buffer[i++] = ch;
                 }
                 buffer[i] = '\0';
                 i = 0;
                 printf("Comment\t\t%s\n", buffer);
-            } else if (next == '*') {
-                // multi-line
+            }
+
+            // Multi-line comment
+            else if (next == '*') {
                 buffer[i++] = '/';
                 buffer[i++] = '*';
+                char prev = 0;
                 while ((ch = fgetc(fp)) != EOF) {
                     buffer[i++] = ch;
-                    if (ch == '*' && (ch = fgetc(fp)) == '/') {
-                        buffer[i++] = '/';
+                    if (prev == '*' && ch == '/')
                         break;
-                    } else {
-                        ungetc(ch, fp);
-                    }
+                    prev = ch;
                 }
                 buffer[i] = '\0';
                 i = 0;
                 printf("Comment\t\t%s\n", buffer);
-            } else {
+            }
+
+            // Division operator
+            else {
                 printf("Operator\t/\n");
                 ungetc(next, fp);
             }
         }
-        // Operators
-        else if (isOperator(ch)) {
-            printf("Operator\t%c\n", ch);
+
+        /* Operators (including multi-character) */
+        else if (isOperatorChar(ch)) {
+            char next = fgetc(fp);
+            if ((ch == '=' && next == '=') ||
+                (ch == '!' && next == '=') ||
+                (ch == '<' && next == '=') ||
+                (ch == '>' && next == '=') ||
+                (ch == '&' && next == '&') ||
+                (ch == '|' && next == '|')) {
+
+                printf("Operator\t%c%c\n", ch, next);
+            } else {
+                printf("Operator\t%c\n", ch);
+                ungetc(next, fp);
+            }
         }
-        // Ignore whitespace
+
+        /* Ignore whitespace */
         else if (isspace(ch)) {
             continue;
         }
-        // Other symbols (punctuation)
+
+        /* Symbols */
         else {
             printf("Symbol\t\t%c\n", ch);
         }
     }
+
     fclose(fp);
     return 0;
 }
